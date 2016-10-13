@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Video Test</title>
+	<script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+	<script type ="text/javascript" src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+	<form>
+		Video ID: <input type="text" id="video">
+		<input type="submit" value="Play!" id="play">
+	</form>
+	<div id="player"></div>
+	<button id="click">Update</button>
+	<script>
+	var id = 'fIuZdhFbLXk';
+
+	$('#play').click(function() {
+		id = $('#video').val()
+		player.loadVideoById({
+			'videoId': id,
+			'startSeconds': 0,
+			'suggestedQuality': 'large'
+		});
+		return false;
+	})
+
+	var tag = document.createElement('script');
+
+	var socket = io.connect();
+
+	tag.src = 'https://www.youtube.com/iframe_api'
+	var firstScriptTag = document.getElementsByTagName('script')[0];
+	firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+	var player;
+	function onYouTubeIframeAPIReady() {
+		player = new YT.Player('player', {
+			height: '390',
+			width: '640',
+			videoId: id,
+			events: {
+				'onReady': onPlayerReady
+			}
+		});
+	}
+
+	function onPlayerReady(event) {
+		event.target.playVideo();
+
+		/*
+		It is the following function that allows us to initialize the video at hand. We can change the video, the starting time, and the size of the video.
+		*/
+
+		socket.on('login', () => {
+			var videoInfo = {
+				id: player.j.videoData.video_id,
+				time: player.getCurrentTime()
+			}
+			socket.emit('passVideo', videoInfo);
+		});
+
+		socket.on('final', (data) => {
+			console.log(Math.floor(data.time))
+			player.loadVideoById({
+				'videoId': data.id,
+				'startSeconds': Math.floor(data.time),
+				'suggestedQuality': 'large'
+			});
+			console.log(data);
+		});
+
+		$('#click').click(function() {
+			socket.emit('updatereq');
+		});
+	}
+
+	var done = false;
+
+	function stopVideo() {
+		player.stopVideo();
+	}
+	</script>
+</body>
+</html>
